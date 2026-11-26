@@ -10,6 +10,26 @@ use std::sync::Arc;
 
 /// Больше Claude всё равно не смотрит — уменьшаем заранее, чтобы ответ был быстрее.
 const MAX_SIDE: i32 = 1568;
+/// Мелкие фрагменты (строка текста, кнопка) увеличиваем: так Claude лучше читает мелкий шрифт.
+const SMALL_SIDE: i32 = 800;
+const UPSCALE_TO: f64 = 1100.0;
+const MAX_UPSCALE: f64 = 3.0;
+
+/// Размер картинки, который лучше всего подходит Claude.
+pub fn size_for_claude(w: i32, h: i32) -> (i32, i32) {
+    let long = w.max(h).max(1);
+    let k = if long > MAX_SIDE {
+        MAX_SIDE as f64 / long as f64
+    } else if long < SMALL_SIDE {
+        (UPSCALE_TO / long as f64).min(MAX_UPSCALE).min(MAX_SIDE as f64 / long as f64)
+    } else {
+        1.0
+    };
+    if (k - 1.0).abs() < 0.05 {
+        return (w, h);
+    }
+    (((w as f64 * k).round() as i32).max(1), ((h as f64 * k).round() as i32).max(1))
+}
 
 /// Пиксели текстуры в формате RGBA (скачиваются один раз на снимок).
 pub struct Pixels {
@@ -52,18 +72,17 @@ fn pixbuf_of(tex: &gdk::Texture) -> Pixbuf {
     Pixbuf::from_bytes(&px.bytes, Colorspace::Rgb, true, 8, px.width, px.height, px.stride as i32)
 }
 
-/// PNG для отправки Claude: уменьшенный, если снимок слишком большой.
+/// PNG для отправки Claude: без потерь; слишком большой — уменьшается, мелкий — увеличивается
+/// с качественной (бикубической) интерполяцией.
 pub fn png_for_claude(tex: &gdk::Texture) -> Vec<u8> {
     let (w, h) = (tex.width(), tex.height());
-    if w.max(h) <= MAX_SIDE {
+    let (nw, nh) = size_for_claude(w, h);
+    if (nw, nh) == (w, h) {
         return tex.save_to_png_bytes().to_vec();
     }
-    let k = MAX_SIDE as f64 / w.max(h) as f64;
     let pb = pixbuf_of(tex);
-    let small = pb
-        .scale_simple(((w as f64 * k) as i32).max(1), ((h as f64 * k) as i32).max(1), InterpType::Hyper)
-        .unwrap_or(pb);
-    small.save_to_bufferv("png", &[]).unwrap_or_default()
+    let scaled = pb.scale_simple(nw, nh, InterpType::Hyper).unwrap_or(pb);
+    scaled.save_to_bufferv("png", &[]).unwrap_or_default()
 }
 
 pub fn image_attachment(tex: &gdk::Texture, label: &str) -> Attachment {
@@ -106,5 +125,18 @@ pub fn from_file(path: &Path) -> Result<(Attachment, Option<gdk::Texture>), Stri
             }
             Ok((Attachment::File { path: path.to_path_buf(), label: name }, None))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::size_for_claude;
+
+    #[test]
+    fn sizes() {
+        assert_eq!(size_for_claude(1000, 900), (1000, 900)); // средний — как есть
+        assert_eq!(size_for_claude(3136, 1000), (1568, 500)); // большой — уменьшается
+        assert_eq!(size_for_claude(300, 40), (900, 120)); // строка текста — ×3
+        assert_eq!(size_for_claude(600, 300), (1100, 550)); // мелкий — до ~1100
     }
 }

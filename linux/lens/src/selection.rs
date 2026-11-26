@@ -65,7 +65,11 @@ mod imp {
             let full = Rect::new(0.0, 0.0, w, h);
 
             if let Some(tex) = self.texture.borrow().as_ref() {
-                snapshot.append_scaled_texture(tex, gsk::ScalingFilter::Linear, &full);
+                // если снимок крупнее окна (дробный масштаб), трилинейная фильтрация даёт чёткую
+                // картинку без «ряби»; при совпадении размеров пиксели выводятся один к одному
+                let px_w = w * self.obj().scale_factor() as f32;
+                let filter = if tex.width() as f32 > px_w + 1.0 { gsk::ScalingFilter::Trilinear } else { gsk::ScalingFilter::Linear };
+                snapshot.append_scaled_texture(tex, filter, &full);
             }
 
             // затемнение: сильнее вокруг выделения
