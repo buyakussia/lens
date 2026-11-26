@@ -121,36 +121,88 @@ impl App {
         }
     }
 
-    /// GNOME спрашивает разрешение только у приложения в фокусе, поэтому показываем своё окно.
+    /// GNOME спрашивает разрешение только у приложения, окно которого в фокусе. Поэтому окно
+    /// остаётся открытым, пока GNOME не ответит; после разрешения снимок делается заново,
+    /// уже без этого окна на экране.
     fn ask_permission(self: &Rc<Self>, kind: Shot, err: &str) {
         eprintln!("lens: screenshot: {err}");
-        let d = adw::AlertDialog::new(
-            Some("Разрешите Lens снимать экран"),
-            Some("Чтобы выделять область без окна скриншота GNOME, нужно один раз разрешить снимки экрана. \
-                  GNOME покажет вопрос — ответьте «Разрешить»."),
-        );
-        d.add_response("cancel", "Не сейчас");
-        d.add_response("gnome", "Окно скриншота GNOME");
-        d.add_response("allow", "Разрешить");
-        d.set_response_appearance("allow", adw::ResponseAppearance::Suggested);
-        d.set_default_response(Some("allow"));
-        let me = self.clone();
-        d.connect_response(None, move |_, r| {
-            let me = me.clone();
-            let interactive = match r {
-                "allow" => false,
-                "gnome" => true,
-                _ => return,
-            };
+        let win = adw::Window::new();
+        win.set_application(Some(&self.app));
+        win.set_title(Some("Lens"));
+        win.set_default_size(420, -1);
+        win.set_resizable(false);
+        let page = adw::StatusPage::builder()
+            .icon_name("camera-photo-symbolic")
+            .title("Разрешите Lens снимать экран")
+            .description("Один раз — чтобы выделять область без окна скриншота GNOME.\n\
+                          Нажмите «Разрешить», а затем «Разрешить» в вопросе GNOME.")
+            .build();
+        let col = gtk::Box::new(gtk::Orientation::Vertical, 10);
+        col.set_margin_start(32);
+        col.set_margin_end(32);
+        col.set_margin_bottom(28);
+        let allow = gtk::Button::with_label("Разрешить");
+        allow.add_css_class("suggested-action");
+        allow.add_css_class("pill");
+        let gnome = gtk::Button::with_label("Использовать окно скриншота GNOME");
+        gnome.add_css_class("pill");
+        let cancel = gtk::Button::with_label("Не сейчас");
+        cancel.add_css_class("flat");
+        col.append(&allow);
+        col.append(&gnome);
+        col.append(&cancel);
+        let outer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        outer.append(&page);
+        outer.append(&col);
+        win.set_content(Some(&outer));
+
+        let w = win.clone();
+        cancel.connect_clicked(move |_| w.close());
+
+        let (me, w, p) = (self.clone(), win.clone(), page.clone());
+        allow.connect_clicked(move |b| {
+            b.set_sensitive(false);
+            b.set_label("Ждём ответа GNOME…");
+            let (me, w, p, b) = (me.clone(), w.clone(), p.clone(), b.clone());
             glib::spawn_future_local(async move {
-                match portal::screenshot(interactive).await {
-                    Ok(p) => me.got_shot(kind, &p),
-                    Err(portal::ShotError::Cancelled) => {}
-                    Err(_) => me.notify("GNOME не разрешил снимок экрана. Попробуйте ещё раз в настройках Lens."),
+                match portal::screenshot(false).await {
+                    Ok(path) => {
+                        // этот снимок с нашим окном на экране — не нужен
+                        portal::take_file(&path);
+                        w.close();
+                        glib::timeout_future(std::time::Duration::from_millis(350)).await;
+                        me.shoot(kind);
+                    }
+                    Err(e) => {
+                        if let portal::ShotError::Denied(e) = e {
+                            eprintln!("lens: screenshot permission: {e}");
+                        }
+                        p.set_description(Some(
+                            "GNOME не дал разрешение. Попробуйте ещё раз или используйте окно скриншота GNOME.",
+                        ));
+                        b.set_label("Попробовать ещё раз");
+                        b.set_sensitive(true);
+                    }
                 }
             });
         });
-        d.present(None::<&gtk::Widget>);
+
+        let (me, w) = (self.clone(), win.clone());
+        gnome.connect_clicked(move |_| {
+            w.close();
+            let me = me.clone();
+            glib::spawn_future_local(async move {
+                glib::timeout_future(std::time::Duration::from_millis(300)).await;
+                match portal::screenshot(true).await {
+                    Ok(p) => me.got_shot(kind, &p),
+                    Err(portal::ShotError::Cancelled) => {}
+                    Err(_) => me.notify("Не удалось сделать снимок экрана."),
+                }
+            });
+        });
+        win.set_default_widget(Some(&allow));
+        win.present();
+        allow.grab_focus();
     }
 
     // ------------------------------------------------------------------ Win+C
