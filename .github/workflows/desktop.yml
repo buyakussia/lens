@@ -1,7 +1,7 @@
 name: Desktop builds
 
 # Сборка Lens для macOS (Apple Silicon и Intel) и Windows.
-# Запускается вручную или при теге вида v1.2.3; готовые файлы — в артефактах запуска.
+# Запускается вручную или при теге вида v1.2.3; при теге файлы попадают в Releases, иначе — в артефакты запуска.
 on:
   workflow_dispatch:
   push:
@@ -18,7 +18,7 @@ jobs:
           - os: macos-latest        # Apple Silicon
             args: --target aarch64-apple-darwin
             rust_target: aarch64-apple-darwin
-          - os: macos-13            # Intel
+          - os: macos-15-intel       # Intel
             args: --target x86_64-apple-darwin
             rust_target: x86_64-apple-darwin
           - os: windows-latest
@@ -71,3 +71,29 @@ jobs:
           path: |
             desktop/lens/src-tauri/target/release/bundle/nsis/*.exe
             desktop/lens/src-tauri/target/release/bundle/msi/*.msi
+
+  release:
+    # Публикует готовые установщики на странице Releases (только для тегов v*).
+    # Выкладывает то, что собралось успешно, даже если одна из платформ упала.
+    needs: build
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Collect installers
+        run: |
+          mkdir out
+          find dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' \) -exec cp {} out/ \;
+          ls -l out
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" out/* \
+            --repo "${{ github.repository }}" \
+            --title "Lens ${{ github.ref_name }}" \
+            --notes "Установщики для macOS (Apple Silicon и Intel) и Windows. Сборки не подписаны: на macOS открывайте через правый клик → Открыть. Нужен установленный и авторизованный Claude Code."
