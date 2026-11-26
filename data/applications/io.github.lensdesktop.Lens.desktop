@@ -1,0 +1,28 @@
+[Desktop Entry]
+Type=Application
+Name=Lens
+GenericName=Screen assistant
+Comment=Ask Claude Code about anything on your screen: screenshots, files, selected text
+Comment[ru]=Спросите Claude Code о том, что на экране: скриншоты, файлы, выделенный текст
+Exec=lens
+Icon=io.github.lensdesktop.Lens
+Terminal=false
+Categories=Utility;
+Keywords=claude;ai;screenshot;ocr;translate;
+StartupWMClass=lens
+Actions=capture;history;settings;
+
+[Desktop Action capture]
+Name=Screenshot and ask
+Name[ru]=Снимок области и вопрос
+Exec=lens --capture area
+
+[Desktop Action history]
+Name=Chat history
+Name[ru]=История чатов
+Exec=lens --history
+
+[Desktop Action settings]
+Name=Settings
+Name[ru]=Настройки
+Exec=lens --settings

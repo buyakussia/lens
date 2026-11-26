@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Clipboard History
+Name[ru]=История буфера обмена
+Comment=Clipboard history with search and pinning, like Win+V
+Comment[ru]=История буфера обмена с поиском и закреплением, как Win+V
+Exec=clipboard-history
+Icon=io.github.lensdesktop.ClipboardHistory
+Terminal=false
+Categories=Utility;
+Keywords=clipboard;paste;history;copy;
+StartupWMClass=clipboard-history
+Actions=settings;
+
+[Desktop Action settings]
+Name=Settings
+Name[ru]=Настройки
+Exec=clipboard-history --settings

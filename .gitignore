@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.bak*
+/build/
+node_modules/
+target/
+src-tauri/gen/
