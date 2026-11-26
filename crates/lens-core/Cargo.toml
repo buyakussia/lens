@@ -1,0 +1,15 @@
+[package]
+name = "lens-core"
+description = "Platform-independent core of Lens: Claude Code runner, settings, chat history"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+base64.workspace = true
+dirs.workspace = true
+
+[lints]
+workspace = true

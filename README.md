@@ -1,75 +1,96 @@
 # Lens & Clipboard History
 
-Two small desktop apps for Linux (GNOME on Wayland first):
+Два небольших нативных приложения для Linux (GNOME, Wayland):
 
-- **Lens** — a floating quick panel for [Claude Code](https://claude.com/claude-code): select part of the screen, a file or some text and ask about it. Think "Google Lens, but you can talk to it".
-- **Clipboard History** — clipboard history with search and pinning, opened with <kbd>Super</kbd>+<kbd>V</kbd> like on Windows.
+- **Lens** — выделите любую часть экрана и сразу спросите о ней [Claude Code](https://claude.com/claude-code). Как Google Lens, только с ним можно разговаривать.
+- **Clipboard History** — история буфера обмена на <kbd>Super</kbd>+<kbd>V</kbd>, как в Windows, но вся история сохраняется после перезагрузки, а лимиты больше.
 
-> Unofficial community project. Not affiliated with or endorsed by Anthropic. "Claude" is a trademark of Anthropic, PBC.
-> Lens does not talk to any API itself: it runs the `claude` command you have installed and signed in to.
+> Неофициальный проект, не связан с Anthropic и не одобрен ею. «Claude» — товарный знак Anthropic, PBC.
+> Lens сам не обращается ни к какому API: он запускает установленную у вас команду `claude`, в которую вы уже вошли.
 
-*По-русски — ниже.*
+*English summary below.*
 
 ## Lens
 
-| | |
+| Клавиши | Что происходит |
 |---|---|
-| <kbd>Super</kbd>+<kbd>C</kbd> | open the panel |
-| <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> | ask about the text selected with the mouse |
-| <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> | **quiet mode**: snapshot the screen and show the answer in a small corner popup that never takes keyboard focus (videos keep playing) |
-| <kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> | in the panel: screenshot of an area / the whole screen / a window |
-| <kbd>Ctrl</kbd>+<kbd>H</kbd>, <kbd>Ctrl</kbd>+<kbd>N</kbd>, <kbd>Alt</kbd>+<kbd>1…9</kbd> | chat history, new chat, quick actions |
+| <kbd>Super</kbd>+<kbd>C</kbd> | Экран «замирает», края подсвечиваются. Выделите область мышью — она сразу попадает в чат внизу экрана. Можно и не выделять, а просто спросить. |
+| <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> | **Тихий режим**: Lens смотрит на весь экран и коротко отвечает в маленьком окне в правом нижнем углу. Окно не забирает фокус, так что видео продолжает играть. |
+| <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> | Спросить про текст, выделенный мышью. |
 
-- Annotate screenshots before sending (arrow, box, highlighter, text).
-- Attach images, PDFs, code and text: paste, drag & drop, or just copy something — it is attached automatically when you open the panel.
-- Streaming answers with Markdown, tables and highlighted code blocks with a Copy button.
-- Quick action buttons (Translate, Explain, Recognize text, Fix code, Summarize) — editable, add your own.
-- Chat history (last 100 chats) with search; old chats can be continued.
-- Settings: model, system prompt, hotkeys, snapshot folder, autostart, floating button. Light and dark GNOME themes.
+В чате:
+
+- **Скрепка** <kbd>+</kbd>, перетаскивание или <kbd>Ctrl</kbd>+<kbd>V</kbd> прикрепляют картинки, PDF, код и текстовые файлы.
+- **Модель** (Авто / Opus / Sonnet / Haiku) выбирается прямо в строке ввода.
+- Ответ печатается потоком, с Markdown, таблицами и блоками кода с кнопкой «Копировать».
+- **Быстрые действия** («Перевести», «Объяснить», «Распознать текст»…) появляются рядом с выделением; в чате — <kbd>Alt</kbd>+<kbd>1…9</kbd>. Их можно менять в настройках.
+- Кнопка 📌 открепляет чат в отдельное окно поверх остальных, чтобы продолжить работу.
+- <kbd>Ctrl</kbd>+<kbd>H</kbd> — история чатов, <kbd>Ctrl</kbd>+<kbd>N</kbd> — новый чат, <kbd>Esc</kbd> — закрыть.
+
+**Снимки экрана не сохраняются на диск.** Выделенная область передаётся Claude прямо в сообщении и живёт только в памяти, пока открыт чат.
 
 ## Clipboard History
 
-- Records text and images copied in any app; up to 50 entries (configurable), pinned ones are kept.
-- <kbd>Enter</kbd> pastes into the window you were in, <kbd>Shift</kbd>+<kbd>Enter</kbd> pastes into a terminal (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>).
-- Entries that password managers mark as secret are not recorded.
-- Optional: send an entry to Lens to ask Claude about it.
+Работает как Win+V в Windows:
 
-## Install
+- Записывает обычный текст, форматированный текст (HTML) и картинки. Файлы и папки не записываются, как и то, что менеджеры паролей помечают секретным.
+- По умолчанию хранит 200 записей (у Windows 25) и картинки до 16 МБ (у Windows 4 МБ). Оба лимита настраиваются.
+- **Вся история переживает перезагрузку**, а не только закреплённые записи. Закреплённые не удаляются ни при очистке, ни при переполнении.
+- <kbd>Enter</kbd> вставляет в окно, где вы были; <kbd>Shift</kbd>+<kbd>Enter</kbd> вставляет в терминал; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> или меню «⋯» → «Вставить без форматирования» вставляет текст без шрифтов и цветов источника.
+- <kbd>Ctrl</kbd>+<kbd>P</kbd> закрепляет, <kbd>Delete</kbd> удаляет, поиск — просто начните печатать.
+- «⋯» → «Спросить Lens» отправляет запись в Lens.
 
-Requirements: Python 3, PyGObject and GTK 3. For Lens also [Claude Code](https://claude.com/claude-code) (`claude` in `PATH` or `~/.local/bin`), signed in. Optional: `libayatana-appindicator` (tray icon), `wl-clipboard`.
+## Установка
+
+Нужны GTK 4.14+ и libadwaita 1.5+ (есть в любом свежем дистрибутиве с GNOME), а для Lens — [Claude Code](https://claude.com/claude-code), в который вы уже вошли.
+
+**Готовая сборка:** скачайте `lens-linux-x86_64.tar.gz` со страницы Releases, распакуйте и запустите `./install.sh`.
+
+**Из исходников** (нужен [Rust](https://rustup.rs)):
 
 ```bash
-git clone <this repo> && cd lens
-./install.sh            # both apps; or: ./install.sh lens | ./install.sh clipboard
+sudo apt install libgtk-4-dev libadwaita-1-dev   # Fedora: gtk4-devel libadwaita-devel; Arch: gtk4 libadwaita
+git clone <этот репозиторий> && cd lens
+./install.sh            # оба приложения; или: ./install.sh lens | ./install.sh clipboard
 ```
 
-Everything goes to `~/.local`; both apps start in the background at login. `./uninstall.sh` removes the apps (add `--purge` to remove history and settings too).
+Всё ставится в `~/.local`, оба приложения запускаются в фоне при входе в систему. `./uninstall.sh` удаляет их (с `--purge` — вместе с историей и настройками). Прежнюю версию на Python установщик заменяет сам, история буфера обмена переносится.
 
-### GNOME notes
+### Один раз при первом запуске
 
-- **Tray icon.** GNOME does not show tray icons by itself. Install the AppIndicator extension (Arch: `gnome-shell-extension-appindicator`, Ubuntu has it already) — or use the floating button.
-- **Full-screen and quiet-mode snapshots** use the system screenshot portal. Allow them once: Lens → Settings → *Screenshots without confirmation* → *Allow*.
-- **Auto-paste** in Clipboard History uses the Remote Desktop portal: GNOME asks for permission once and briefly shows a "remote control" icon in the top bar while pasting. You can turn auto-paste off in its settings.
-- Global hotkeys are registered as GNOME custom shortcuts and can be changed in each app's settings.
+- **Снимки экрана.** При первом <kbd>Super</kbd>+<kbd>C</kbd> Lens попросит разрешить снимки экрана без подтверждения, а GNOME спросит один раз. После этого окно скриншота больше не появляется.
+- **Автовставка** в Clipboard History нажимает <kbd>Ctrl</kbd>+<kbd>V</kbd> за вас через портал Remote Desktop: GNOME один раз спросит разрешение и во время вставки ненадолго показывает значок удалённого управления. Её можно отключить в настройках, тогда запись только копируется.
+- Горячие клавиши регистрируются как пользовательские сочетания GNOME; поменять их можно в настройках каждого приложения.
 
-## Privacy
+## Как устроено
 
-Everything stays on your computer: chat history in `~/.local/share/lens`, clipboard history in `~/.local/share/clipboard-history`, snapshots in `~/Pictures/Lens`. Only what you send to Claude goes through Claude Code to Anthropic.
+```
+crates/lens-core    ядро Lens без GUI: запуск Claude Code, настройки, история чатов
+crates/clip-core    ядро истории буфера без GUI: хранилище, лимиты, закрепление
+linux/common        интеграция с GNOME: порталы, горячие клавиши, автозапуск, окна поверх остальных
+linux/lens          Lens для Linux (GTK 4 + libadwaita)
+linux/clipboard     Clipboard History для Linux (GTK 4 + libadwaita)
+macos/, windows/    план нативных версий (пока не начаты)
+```
 
-## Status
+Написано на Rust; интерфейс — нативный GTK 4 и libadwaita, поэтому приложения сами следуют светлой и тёмной теме GNOME. Оверлей выделения и анимации рисуются видеокартой. Большие объекты (снимок экрана, окна) создаются только когда нужны и сразу освобождаются; в фоне приложения просто ждут горячую клавишу.
 
-Linux only for now. Built with Python + GTK 3 (windows run through XWayland so they can stay on top). Tested on GNOME 51 / Wayland. Ports to macOS and Windows are planned.
+Окна работают через XWayland: только так GNOME позволяет обычному приложению держать окно поверх остальных, показывать окно без фокуса и следить за буфером обмена.
 
-## License
+## Конфиденциальность
 
-MIT — see [LICENSE](LICENSE).
+Всё хранится у вас: история чатов — в `~/.local/share/lens`, история буфера — в `~/.local/share/clipboard-history`. Claude (через Claude Code) получает только то, что вы сами отправили.
+
+## Лицензия
+
+MIT — см. [LICENSE](LICENSE).
 
 ---
 
-## По-русски
+## English summary
 
-**Lens** — плавающая панель для Claude Code: снимок области экрана, файл или выделенный текст и вопрос о нём. **Clipboard History** — история буфера обмена на <kbd>Super</kbd>+<kbd>V</kbd>, как в Windows.
+**Lens** — press <kbd>Super</kbd>+<kbd>C</kbd>, the screen freezes with a glowing edge, drag over any area and it lands straight in a chat bar (attach files, pick the model inline). <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> is a *quiet mode*: Lens looks at the whole screen and answers in a small corner popup that never takes focus. Screenshots are never written to disk. Answers come from the `claude` CLI you have installed and signed in to.
 
-Установка: `./install.sh`. Нужен установленный и авторизованный Claude Code. Значок в трее в GNOME появится с расширением `gnome-shell-extension-appindicator`. Снимки всего экрана и тихий режим нужно один раз разрешить в настройках Lens, автовставку — в диалоге GNOME при первой вставке.
+**Clipboard History** — <kbd>Super</kbd>+<kbd>V</kbd> like on Windows: text, rich text (HTML) and images, pinning, search, paste as plain text. Unlike Windows, the whole history survives reboots and limits are higher (200 items, images up to 16 MB, both configurable).
 
-Неофициальный проект, не связан с Anthropic.
+Native Rust + GTK 4/libadwaita apps for GNOME. Install: `./install.sh` (needs GTK 4.14+, libadwaita 1.5+, and Rust to build from source). Platform-independent cores live in `crates/` so native macOS and Windows front ends can be added later — see `macos/README.md` and `windows/README.md`.

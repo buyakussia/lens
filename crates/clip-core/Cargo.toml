@@ -1,0 +1,14 @@
+[package]
+name = "clip-core"
+description = "Platform-independent clipboard history store (persistent, with pinning and limits)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+lens-core.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "linux-common"
+description = "GNOME/Linux integration shared by Lens and Clipboard History: portals, hotkeys, autostart, X11 window hints"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+gtk.workspace = true
+gdk-x11.workspace = true
+x11rb.workspace = true
+async-channel.workspace = true
+libc.workspace = true
+dirs.workspace = true
+
+[lints]
+workspace = true
