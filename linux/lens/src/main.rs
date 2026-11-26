@@ -1,10 +1,10 @@
 //! Lens для Linux (GNOME): выделите часть экрана и спросите Claude Code о ней.
 //!
 //! Команды (их вызывают горячие клавиши GNOME; работающая копия получает их мгновенно):
-//!   lens --select     выделить область и спросить (Super+C)
+//!   lens --chat       открыть / закрыть чат (Super+C); область выделяется кнопкой в чате
+//!   lens --select     сразу выделить область и спросить (по умолчанию без сочетания)
 //!   lens --quiet      тихий вопрос по всему экрану, ответ в углу (Super+Alt+C)
 //!   lens --selection  спросить про выделенный мышью текст (Super+Shift+C)
-//!   lens --chat       открыть чат без выделения
 //!   lens --history    история чатов
 //!   lens --settings   настройки
 //!   lens --attach-image ФАЙЛ / --attach-text-file ФАЙЛ  — прикрепить (из Clipboard History)
@@ -44,7 +44,10 @@ struct App {
 
 #[derive(Clone, Copy, PartialEq)]
 enum Shot {
+    /// Оверлей с чатом (отдельное сочетание клавиш).
     Select,
+    /// Кнопка в чате: только выбрать область и вернуться в чат.
+    Pick,
     Quiet,
 }
 
@@ -80,7 +83,14 @@ impl App {
                 a.show_settings();
             }
         });
-        *chat.0.hooks.borrow_mut() = chat::Hooks { close: Some(close), detach: Some(detach), settings: Some(settings) };
+        let w = Rc::downgrade(&me);
+        let select: Rc<dyn Fn()> = Rc::new(move || {
+            if let Some(a) = w.upgrade() {
+                a.pick_area();
+            }
+        });
+        *chat.0.hooks.borrow_mut() =
+            chat::Hooks { close: Some(close), detach: Some(detach), settings: Some(settings), select: Some(select) };
         me
     }
 
@@ -117,6 +127,7 @@ impl App {
         };
         match kind {
             Shot::Select => self.open_overlay(tex),
+            Shot::Pick => self.open_picker(tex),
             Shot::Quiet => self.open_quiet(tex),
         }
     }
@@ -222,7 +233,7 @@ impl App {
         // чат переезжает из отдельного окна в оверлей
         self.close_floating_window();
         self.chat.on_open();
-        let ov = Overlay::open(&self.app, tex, &self.chat);
+        let ov = Overlay::open(&self.app, tex, &self.chat, false);
         let w = Rc::downgrade(self);
         let me_ov = Rc::downgrade(&ov);
         ov.connect_closed(move || {
@@ -234,6 +245,48 @@ impl App {
             }
         });
         *self.overlay.borrow_mut() = Some(ov);
+    }
+
+    /// Кнопка в чате: чат прячется, экран застывает, выделенная область возвращается в чат.
+    fn pick_area(self: &Rc<Self>) {
+        if self.capturing.get() || self.overlay.borrow().is_some() {
+            return;
+        }
+        self.close_floating_window();
+        let me = self.clone();
+        // даём окну чата исчезнуть, чтобы оно не попало в снимок
+        glib::timeout_add_local_once(std::time::Duration::from_millis(220), move || me.shoot(Shot::Pick));
+    }
+
+    fn open_picker(self: &Rc<Self>, tex: gdk::Texture) {
+        let ov = Overlay::open(&self.app, tex, &self.chat, true);
+        let chat = self.chat.clone();
+        ov.connect_pick(move |t| {
+            chat.add_attachment(image::image_attachment(&t, "Фрагмент экрана"), Some(t), true);
+        });
+        let w = Rc::downgrade(self);
+        ov.connect_closed(move || {
+            if let Some(a) = w.upgrade() {
+                a.overlay.borrow_mut().take();
+                // и при выборе, и при отмене возвращаемся в чат
+                a.show_floating();
+            }
+        });
+        *self.overlay.borrow_mut() = Some(ov);
+    }
+
+    /// Super+C: открыть чат или закрыть, если он уже открыт.
+    fn toggle_chat(self: &Rc<Self>) {
+        let ov = self.overlay.borrow().clone();
+        if let Some(ov) = ov {
+            ov.close();
+            return;
+        }
+        if self.floating.borrow().is_some() {
+            self.close_floating_window();
+            return;
+        }
+        self.show_floating();
     }
 
     // ------------------------------------------------------------------ чат в отдельном окне
@@ -425,7 +478,9 @@ impl App {
         } else if has("--remove-hotkeys") {
             settings::hotkeys().remove_all(&["lens-capture"]);
             self.app.quit();
-        } else if has("--chat") || first || args.is_empty() {
+        } else if has("--chat") {
+            self.toggle_chat();
+        } else if first || args.is_empty() {
             self.show_floating();
         }
     }

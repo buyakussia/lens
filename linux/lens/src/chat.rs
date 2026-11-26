@@ -41,6 +41,8 @@ pub struct Hooks {
     pub close: Option<Rc<dyn Fn()>>,
     pub detach: Option<Rc<dyn Fn()>>,
     pub settings: Option<Rc<dyn Fn()>>,
+    /// Кнопка «Выделить область экрана».
+    pub select: Option<Rc<dyn Fn()>>,
 }
 
 pub struct Inner {
@@ -49,6 +51,7 @@ pub struct Inner {
     head_rev: gtk::Revealer,
     title: gtk::Label,
     detach_btn: gtk::Button,
+    select_btn: gtk::Button,
     history_btn: gtk::MenuButton,
     msgs_rev: gtk::Revealer,
     msgs: gtk::Box,
@@ -118,6 +121,43 @@ pub fn logo(size: i32) -> gtk::DrawingArea {
         cr.curve_to(c + k * 0.15, c + k * 0.15, c + k * 0.15, c + k * 0.15, c, c + k);
         cr.curve_to(c - k * 0.15, c + k * 0.15, c - k * 0.15, c + k * 0.15, c - k, c);
         cr.curve_to(c - k * 0.15, c - k * 0.15, c - k * 0.15, c - k * 0.15, c, c - k);
+        let _ = cr.fill();
+    });
+    a
+}
+
+/// Значок «выделить область»: четыре уголка, как у рамки выделения на экране.
+fn corners_icon(size: i32) -> gtk::DrawingArea {
+    let a = gtk::DrawingArea::new();
+    a.set_content_width(size);
+    a.set_content_height(size);
+    a.set_halign(gtk::Align::Center);
+    a.set_valign(gtk::Align::Center);
+    a.set_draw_func(|area, cr, w, h| {
+        let c = area.color();
+        cr.set_source_rgba(c.red() as f64, c.green() as f64, c.blue() as f64, c.alpha() as f64);
+        let s = w.min(h) as f64;
+        let (m, l) = (1.5, s * 0.36);
+        cr.set_line_width(1.8);
+        cr.set_line_cap(gtk::cairo::LineCap::Round);
+        cr.set_line_join(gtk::cairo::LineJoin::Round);
+        for (x, y, dx, dy) in [(m, m, 1.0, 1.0), (s - m, m, -1.0, 1.0), (m, s - m, 1.0, -1.0), (s - m, s - m, -1.0, -1.0)] {
+            cr.move_to(x + dx * l, y);
+            cr.line_to(x, y);
+            cr.line_to(x, y + dy * l);
+        }
+        let _ = cr.stroke();
+        // маленькая искра в центре — «спросить об этом»
+        let (cx, k) = (s / 2.0, s * 0.13);
+        cr.move_to(cx, cx - k);
+        cr.line_to(cx + k * 0.3, cx - k * 0.3);
+        cr.line_to(cx + k, cx);
+        cr.line_to(cx + k * 0.3, cx + k * 0.3);
+        cr.line_to(cx, cx + k);
+        cr.line_to(cx - k * 0.3, cx + k * 0.3);
+        cr.line_to(cx - k, cx);
+        cr.line_to(cx - k * 0.3, cx - k * 0.3);
+        cr.close_path();
         let _ = cr.fill();
     });
     a
@@ -198,6 +238,11 @@ impl ChatView {
         attach_btn.set_valign(gtk::Align::End);
         attach_btn.add_css_class("lens-round");
         row.append(&attach_btn);
+        let select_btn = icon_button("selection-mode-symbolic", "Выделить область экрана (Ctrl+S)");
+        select_btn.set_child(Some(&corners_icon(18)));
+        select_btn.set_valign(gtk::Align::End);
+        select_btn.add_css_class("lens-round");
+        row.append(&select_btn);
 
         let entry = gtk::TextView::new();
         entry.add_css_class("lens-entry");
@@ -249,6 +294,7 @@ impl ChatView {
             head_rev,
             title,
             detach_btn: detach_btn.clone(),
+            select_btn: select_btn.clone(),
             history_btn: history_btn.clone(),
             msgs_rev,
             msgs,
@@ -297,6 +343,13 @@ impl ChatView {
         let v = view.clone();
         attach_btn.connect_clicked(move |_| v.pick_files());
         let v = view.clone();
+        select_btn.connect_clicked(move |_| {
+            let hook = v.0.hooks.borrow().select.clone();
+            if let Some(h) = hook {
+                h();
+            }
+        });
+        let v = view.clone();
         new_btn.connect_clicked(move |_| v.new_chat());
         let v = view.clone();
         close_btn.connect_clicked(move |_| v.request_close());
@@ -334,6 +387,8 @@ impl ChatView {
     pub fn set_floating(&self, floating: bool) {
         self.0.floating.set(floating);
         self.0.detach_btn.set_visible(!floating);
+        // в оверлее область выделяется прямо на экране, кнопка не нужна
+        self.0.select_btn.set_visible(floating);
         if floating {
             self.0.root.add_css_class("floating");
         } else {
@@ -386,7 +441,7 @@ impl ChatView {
         } else if !i.floating.get() {
             "Выделите область экрана или спросите что угодно…"
         } else {
-            "Спросите что угодно…"
+            "Спросите что угодно или выделите область экрана…"
         });
         i.atts_rev.set_reveal_child(has_atts);
         i.actions_rev.set_reveal_child(has_atts && text_empty && !running && !i.cfg.borrow().actions.is_empty());
@@ -490,14 +545,11 @@ impl ChatView {
         let chip = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         chip.add_css_class("lens-chip");
         if let Some(t) = &thumb {
-            let pic = gtk::Picture::for_paintable(t);
-            pic.set_content_fit(gtk::ContentFit::Cover);
-            pic.set_size_request(44, 44);
-            pic.set_can_shrink(true);
-            let frame = gtk::AspectFrame::new(0.5, 0.5, 1.0, false);
-            frame.set_child(Some(&pic));
-            frame.set_size_request(44, 44);
-            chip.append(&frame);
+            // gtk::Image вписывает картинку в квадрат заданного размера — превью не раздувает чат
+            let img = gtk::Image::from_paintable(Some(t));
+            img.set_pixel_size(44);
+            img.add_css_class("lens-chip-thumb");
+            chip.append(&img);
         } else {
             let icon = gtk::Image::from_icon_name(match &att {
                 Attachment::Pdf { .. } => "x-office-document-symbolic",
@@ -650,6 +702,13 @@ impl ChatView {
                 }
                 Key::n | Key::N if ctrl => {
                     v.new_chat();
+                    glib::Propagation::Stop
+                }
+                Key::s | Key::S if ctrl && v.0.floating.get() => {
+                    let hook = v.0.hooks.borrow().select.clone();
+                    if let Some(h) = hook {
+                        h();
+                    }
                     glib::Propagation::Stop
                 }
                 Key::h | Key::H if ctrl => {

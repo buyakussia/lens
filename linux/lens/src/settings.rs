@@ -14,7 +14,8 @@ pub fn hotkeys() -> hotkeys::Hotkeys {
         app_name: "Lens",
         exe: autostart::self_exe("lens"),
         items: vec![
-            hotkeys::Hotkey { id: "lens-open", title: "Выделить область и спросить", args: "--select", default: "<Super>c" },
+            hotkeys::Hotkey { id: "lens-open", title: "Открыть чат", args: "--chat", default: "<Super>c" },
+            hotkeys::Hotkey { id: "lens-select", title: "Сразу выделить область и спросить", args: "--select", default: "" },
             hotkeys::Hotkey { id: "lens-quiet", title: "Тихий вопрос по экрану", args: "--quiet", default: "<Super><Alt>c" },
             hotkeys::Hotkey { id: "lens-selection", title: "Спросить про выделенный текст", args: "--selection", default: "<Super><Shift>c" },
         ],

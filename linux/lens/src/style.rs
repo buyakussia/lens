@@ -47,7 +47,7 @@ menubutton.lens-model > button:hover { background: alpha(@window_fg_color, 0.08)
   transition: background 150ms ease;
 }
 .lens-chip:hover { background: alpha(@window_fg_color, 0.11); }
-.lens-chip picture { border-radius: 8px; }
+.lens-chip-thumb { border-radius: 8px; }
 .lens-chip label { font-size: 13px; }
 .lens-chip-icon { min-width: 40px; min-height: 40px; border-radius: 8px; background: alpha(@window_fg_color, 0.08); }
 button.lens-chip-x { min-width: 22px; min-height: 22px; padding: 0; border-radius: 99px; }

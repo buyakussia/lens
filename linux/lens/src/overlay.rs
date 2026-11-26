@@ -21,6 +21,8 @@ pub struct Overlay {
     chat: ChatView,
     closing: Cell<bool>,
     on_closed: RefCell<Option<Box<dyn FnOnce()>>>,
+    /// Режим «только выбрать область» (кнопка в чате): выделенное отдаётся сюда, оверлей закрывается.
+    on_pick: RefCell<Option<Box<dyn Fn(gdk::Texture)>>>,
 }
 
 fn fade(w: &impl IsA<gtk::Widget>, to: f64, ms: u32) {
@@ -66,7 +68,9 @@ fn texture_for_monitor(tex: gdk::Texture, monitor: &gdk::Monitor) -> gdk::Textur
 }
 
 impl Overlay {
-    pub fn open(app: &adw::Application, tex: gdk::Texture, chat: &ChatView) -> Rc<Overlay> {
+    /// `pick_only`: чат не показывается, выделенная область передаётся в [`Overlay::connect_pick`]
+    /// и оверлей сразу закрывается.
+    pub fn open(app: &adw::Application, tex: gdk::Texture, chat: &ChatView, pick_only: bool) -> Rc<Overlay> {
         let monitor = linux_common::x11::primary_monitor();
         let tex = match &monitor {
             Some(m) => texture_for_monitor(tex, m),
@@ -82,7 +86,11 @@ impl Overlay {
         let overlay = gtk::Overlay::new();
         overlay.set_child(Some(&sel));
 
-        let hint = gtk::Label::new(Some("Выделите область мышью  ·  Esc — закрыть"));
+        let hint = gtk::Label::new(Some(if pick_only {
+            "Выделите область мышью  ·  Esc — отмена"
+        } else {
+            "Выделите область мышью  ·  Esc — закрыть"
+        }));
         hint.add_css_class("lens-hint");
         hint.set_halign(gtk::Align::Center);
         hint.set_valign(gtk::Align::Start);
@@ -113,8 +121,10 @@ impl Overlay {
         holder.set_margin_bottom(44);
         holder.set_margin_top(44);
         holder.set_opacity(0.0);
-        chat.set_floating(false);
-        holder.append(chat.root());
+        if !pick_only {
+            chat.set_floating(false);
+            holder.append(chat.root());
+        }
         overlay.add_overlay(&holder);
         win.set_child(Some(&overlay));
 
@@ -129,6 +139,7 @@ impl Overlay {
             chat: chat.clone(),
             closing: Cell::new(false),
             on_closed: RefCell::new(None),
+            on_pick: RefCell::new(None),
         });
 
         // быстрые действия у выделения: первые три
@@ -191,7 +202,9 @@ impl Overlay {
             None => win.fullscreen(),
         }
         win.present();
-        chat.focus();
+        if !pick_only {
+            chat.focus();
+        }
 
         // карточка чата выезжает снизу, подсказка проявляется
         let h = holder.clone();
@@ -221,8 +234,17 @@ impl Overlay {
         image::crop(px.as_ref()?, x, y, w, h).map(|t| t.upcast())
     }
 
-    fn on_selected(&self, r: Rect) {
+    pub fn connect_pick(&self, f: impl Fn(gdk::Texture) + 'static) {
+        *self.on_pick.borrow_mut() = Some(Box::new(f));
+    }
+
+    fn on_selected(self: &Rc<Self>, r: Rect) {
         let Some(tex) = self.crop() else { return };
+        if let Some(pick) = self.on_pick.borrow().as_ref() {
+            pick(tex);
+            self.close();
+            return;
+        }
         self.chat.add_attachment(image::image_attachment(&tex, "Фрагмент экрана"), Some(tex), true);
         self.chat.focus();
 

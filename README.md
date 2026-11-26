@@ -14,7 +14,7 @@
 
 | Клавиши | Что происходит |
 |---|---|
-| <kbd>Super</kbd>+<kbd>C</kbd> | Экран «замирает», края подсвечиваются. Выделите область мышью — она сразу попадает в чат внизу экрана. Можно и не выделять, а просто спросить. |
+| <kbd>Super</kbd>+<kbd>C</kbd> | Открыть или закрыть чат. Чтобы спросить о части экрана, нажмите в чате кнопку ⌜⌟ «Выделить область» (или <kbd>Ctrl</kbd>+<kbd>S</kbd>): экран «замирает», края подсвечиваются, выделенная мышью область возвращается в чат вложением. |
 | <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> | **Тихий режим**: Lens смотрит на весь экран и коротко отвечает в маленьком окне в правом нижнем углу. Окно не забирает фокус, так что видео продолжает играть. |
 | <kbd>Super</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> | Спросить про текст, выделенный мышью. |
 
@@ -23,8 +23,8 @@
 - **Скрепка** <kbd>+</kbd>, перетаскивание или <kbd>Ctrl</kbd>+<kbd>V</kbd> прикрепляют картинки, PDF, код и текстовые файлы.
 - **Модель** (Авто / Opus / Sonnet / Haiku) выбирается прямо в строке ввода.
 - Ответ печатается потоком, с Markdown, таблицами и блоками кода с кнопкой «Копировать».
-- **Быстрые действия** («Перевести», «Объяснить», «Распознать текст»…) появляются рядом с выделением; в чате — <kbd>Alt</kbd>+<kbd>1…9</kbd>. Их можно менять в настройках.
-- Кнопка 📌 открепляет чат в отдельное окно поверх остальных, чтобы продолжить работу.
+- **Быстрые действия** («Перевести», «Объяснить», «Распознать текст»…) появляются над полем ввода, когда что-то прикреплено; <kbd>Alt</kbd>+<kbd>1…9</kbd>. Их можно менять в настройках.
+- Если хочется сразу выделять область по сочетанию клавиш, назначьте его в настройках («Сразу выделить область и спросить», команда `lens --select`).
 - <kbd>Ctrl</kbd>+<kbd>H</kbd> — история чатов, <kbd>Ctrl</kbd>+<kbd>N</kbd> — новый чат, <kbd>Esc</kbd> — закрыть.
 
 **Снимки экрана не сохраняются на диск.** Выделенная область передаётся Claude прямо в сообщении и живёт только в памяти, пока открыт чат.
@@ -89,7 +89,7 @@ MIT — см. [LICENSE](LICENSE).
 
 ## English summary
 
-**Lens** — press <kbd>Super</kbd>+<kbd>C</kbd>, the screen freezes with a glowing edge, drag over any area and it lands straight in a chat bar (attach files, pick the model inline). <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> is a *quiet mode*: Lens looks at the whole screen and answers in a small corner popup that never takes focus. Screenshots are never written to disk. Answers come from the `claude` CLI you have installed and signed in to.
+**Lens** — <kbd>Super</kbd>+<kbd>C</kbd> opens a chat bar (attach files, pick the model inline); its "select area" button (<kbd>Ctrl</kbd>+<kbd>S</kbd>) freezes the screen with a glowing edge, and the area you drag over comes back into the chat as an attachment. <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> is a *quiet mode*: Lens looks at the whole screen and answers in a small corner popup that never takes focus. Screenshots are never written to disk. Answers come from the `claude` CLI you have installed and signed in to.
 
 **Clipboard History** — <kbd>Super</kbd>+<kbd>V</kbd> like on Windows: text, rich text (HTML) and images, pinning, search, paste as plain text. Unlike Windows, the whole history survives reboots and limits are higher (200 items, images up to 16 MB, both configurable).
 
