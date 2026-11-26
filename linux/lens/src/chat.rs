@@ -620,9 +620,21 @@ impl ChatView {
 
     fn pick_files(&self) {
         let dialog = gtk::FileDialog::builder().title("Прикрепить файлы").modal(true).build();
-        let parent = self.0.root.root().and_downcast::<gtk::Window>();
+        let win = self.0.root.root().and_downcast::<gtk::Window>();
+        let floating = self.0.floating.get();
+        // GNOME ставит окно выбора файлов по центру родителя. Плавающий чат прижат к низу экрана,
+        // поэтому открываем выбор без родителя — по центру экрана — и на это время снимаем
+        // с чата «поверх всех окон», чтобы он его не закрывал.
+        let parent = if floating { None } else { win.clone() };
+        if let (true, Some(w)) = (floating, &win) {
+            linux_common::x11::set_above(w, false);
+        }
         let v = self.clone();
         dialog.open_multiple(parent.as_ref(), gio::Cancellable::NONE, move |res| {
+            if let (true, Some(w)) = (floating, &win) {
+                linux_common::x11::set_above(w, true);
+                w.present();
+            }
             if let Ok(list) = res {
                 let files: Vec<gio::File> = (0..list.n_items()).filter_map(|i| list.item(i).and_downcast()).collect();
                 v.add_files(files);

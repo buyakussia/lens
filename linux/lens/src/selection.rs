@@ -86,8 +86,9 @@ mod imp {
             // переливающаяся подсветка по краям: радужный градиент под маской,
             // которая видна только у краёв экрана
             let t = secs(self.t_open.get());
-            let glow = (0.75 * appear) as f32;
-            let breathe = 0.82 + 0.18 * (t * 1.7).sin() as f32;
+            // подсветка едва заметна: лишь намёк, что экран «застыл»
+            let glow = (0.28 * appear) as f32;
+            let breathe = 0.88 + 0.12 * (t * 1.7).sin() as f32;
             snapshot.push_mask(gsk::MaskMode::Alpha);
             if let Some(mask) = self.mask.borrow().as_ref() {
                 snapshot.append_scaled_texture(mask, gsk::ScalingFilter::Linear, &full);
@@ -151,11 +152,11 @@ mod imp {
     }
 }
 
-/// Маска подсветки: непрозрачна у краёв и плавно исчезает к центру (~6% ширины экрана).
+/// Маска подсветки: непрозрачна у краёв и плавно исчезает к центру (~3% ширины экрана).
 fn edge_mask(w: i32, h: i32) -> gdk::Texture {
     let mw = 320usize;
     let mh = ((mw as f64 * h.max(1) as f64 / w.max(1) as f64).round() as usize).clamp(60, 640);
-    let falloff = mw as f64 * 0.05;
+    let falloff = mw as f64 * 0.032;
     let mut data = vec![0u8; mw * mh * 4];
     for y in 0..mh {
         for x in 0..mw {

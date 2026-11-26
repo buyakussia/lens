@@ -68,6 +68,20 @@ pub fn keep_above(win: &impl IsA<gtk::Native>) {
     });
 }
 
+/// Включить или выключить «поверх всех окон» у уже показанного окна.
+pub fn set_above(win: &impl IsA<gtk::Native>, on: bool) {
+    let Some(id) = xid(win) else { return };
+    with(|x| {
+        let state = atom(x, "_NET_WM_STATE")?;
+        let above = atom(x, "_NET_WM_STATE_ABOVE")?;
+        let ev = ClientMessageEvent::new(32, id, state, [u32::from(on), above, 0, 1, 0]);
+        x.conn
+            .send_event(false, x.root, EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY, ev)
+            .ok()?;
+        Some(())
+    });
+}
+
 /// Окно, которое никогда не получает фокус и которым не управляет оконный менеджер
 /// (override-redirect): видео в активном окне продолжает играть, фокус не теряется.
 /// Вызывать после realize() и до показа.
