@@ -343,7 +343,7 @@ impl App {
                 }
                 if let Some(w) = w.upgrade() {
                     let wa = x11::workarea(&w);
-                    x11::move_to(&w, wa.x() + (wa.width() - width) / 2, wa.y() + wa.height() - height - 12);
+                    x11::move_to(&w, wa.x() + (wa.width() - width) / 2, x11::safe_bottom(&w, 12) - height);
                 }
             });
         }

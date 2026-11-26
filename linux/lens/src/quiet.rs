@@ -175,7 +175,8 @@ impl Quiet {
         let wa = x11::workarea(&self.win);
         let (w, h) = (self.win.width(), self.win.height());
         let x = wa.x() + wa.width() - w + (self.slide.get() * 48.0) as i32;
-        let y = wa.y() + wa.height() - h;
+        // не под доком: его автоскрытие выезжает поверх окон
+        let y = x11::safe_bottom(&self.win, 0) - h;
         x11::move_to(&self.win, x, y);
     }
 

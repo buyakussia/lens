@@ -122,20 +122,42 @@ pub fn raise(win: &impl IsA<gtk::Native>) {
     });
 }
 
-/// Рабочая область монитора (без верхней панели GNOME), в логических пикселях.
-pub fn workarea(widget: &impl IsA<gtk::Widget>) -> gtk::gdk::Rectangle {
+fn monitor_of(widget: &impl IsA<gtk::Widget>) -> Option<gtk::gdk::Monitor> {
     let display = widget.as_ref().display();
-    let monitor = widget
+    widget
         .as_ref()
         .native()
         .and_then(|n| n.surface())
         .and_then(|s| display.monitor_at_surface(&s))
-        .or_else(|| display.monitors().item(0).and_then(|m| m.downcast::<gtk::gdk::Monitor>().ok()));
-    let Some(m) = monitor else { return gtk::gdk::Rectangle::new(0, 0, 1920, 1080) };
+        .or_else(|| display.monitors().item(0).and_then(|m| m.downcast::<gtk::gdk::Monitor>().ok()))
+}
+
+/// Рабочая область монитора (без верхней панели GNOME), в логических пикселях.
+pub fn workarea(widget: &impl IsA<gtk::Widget>) -> gtk::gdk::Rectangle {
+    let Some(m) = monitor_of(widget) else { return gtk::gdk::Rectangle::new(0, 0, 1920, 1080) };
     if let Some(xm) = m.downcast_ref::<gdk_x11::X11Monitor>() {
         return xm.workarea();
     }
     m.geometry()
+}
+
+/// Высота дока с запасом: столько оставляем снизу, если док может выехать поверх окон.
+const DOCK_GAP: i32 = 96;
+
+/// Нижняя граница, до которой можно ставить окно, чтобы его не закрыл док.
+///
+/// Закреплённый док (Dash to Dock, Ubuntu Dock) резервирует место, и GNOME уже вычитает его
+/// из рабочей области — тогда хватит маленького отступа. Док с автоскрытием места не резервирует
+/// и выезжает поверх окон, поэтому если снизу ничего не зарезервировано, оставляем место под него.
+pub fn safe_bottom(widget: &impl IsA<gtk::Widget>, margin: i32) -> i32 {
+    let wa = workarea(widget);
+    let bottom = wa.y() + wa.height();
+    let screen_bottom = monitor_of(widget).map(|m| m.geometry()).map(|g| g.y() + g.height()).unwrap_or(bottom);
+    if bottom >= screen_bottom {
+        bottom - margin.max(DOCK_GAP)
+    } else {
+        bottom - margin
+    }
 }
 
 /// Первый монитор (на XWayland GTK не знает, где курсор на Wayland-окнах).
