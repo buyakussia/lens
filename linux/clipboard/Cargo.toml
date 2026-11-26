@@ -1,0 +1,20 @@
+[package]
+name = "clipboard-history"
+description = "Clipboard history for GNOME, like Win+V, that survives reboots"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "clipboard-history"
+path = "src/main.rs"
+
+[dependencies]
+clip-core.workspace = true
+lens-core.workspace = true
+linux-common.workspace = true
+gtk.workspace = true
+adw.workspace = true
+
+[lints]
+workspace = true

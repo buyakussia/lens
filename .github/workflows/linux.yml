@@ -1,0 +1,68 @@
+name: Linux build
+
+# Проверка и сборка Lens и Clipboard History для Linux.
+# При теге вида v1.2.3 готовые программы выкладываются в Releases.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GTK 4 and libadwaita
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-4-dev libadwaita-1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+
+      - name: Lint
+        run: cargo clippy --workspace --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Package
+        run: |
+          name=lens-linux-x86_64
+          mkdir -p "dist/$name/target/release"
+          cp target/release/lens target/release/clipboard-history "dist/$name/target/release/"
+          cp -r data install.sh uninstall.sh README.md LICENSE "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lens-linux-x86_64
+          path: dist/lens-linux-x86_64.tar.gz
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lens-linux-x86_64
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" lens-linux-x86_64.tar.gz \
+            --repo "${{ github.repository }}" \
+            --title "Lens ${{ github.ref_name }}" \
+            --notes "Lens и Clipboard History для Linux (GNOME). Распакуйте и запустите ./install.sh. Нужны GTK 4.14+, libadwaita 1.5+ и установленный Claude Code."
